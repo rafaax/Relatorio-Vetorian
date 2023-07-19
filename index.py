@@ -80,7 +80,7 @@ def relatorio_teste1():
     df = df[df['velocidade'] > 5] 
     df['ultrapassada'] = df.apply(lambda row: ultrapassado(row['velocidade'], row['pos_id']), axis=1)
     
-    print(df)
+    # print(df)
 
     return 'ok'
 
