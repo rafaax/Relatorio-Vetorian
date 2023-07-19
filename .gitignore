@@ -1,0 +1,4 @@
+*.xlsx
+*csv
+*txt
+conexao.py
