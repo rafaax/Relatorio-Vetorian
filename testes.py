@@ -59,7 +59,7 @@ def patternFill():
     
 
     styled_df = df_raw.style.applymap(lambda x: f'color: {"red" if isinstance(x,str) else "black"}''')\
-                                        .applymap(velocidade_excedida, subset='velocidade_excedida')
+                    .applymap(velocidade_excedida, subset='velocidade_excedida')
                                 
     styled_df.index = pd.RangeIndex(len(styled_df.index))
 

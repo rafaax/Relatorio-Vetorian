@@ -2,3 +2,7 @@
 *csv
 *txt
 conexao.py
+rota_percorrida.py
+venv/
+.idea/
+__pycache__
