@@ -6,7 +6,10 @@ import csv
 import chardet
 import pytz
 import os
-
+import matplotlib.pyplot as plt
+from io import BytesIO
+from xhtml2pdf import pisa
+from functions import Functions
 from flask import Flask, request, Response
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.utils import get_column_letter
@@ -16,55 +19,13 @@ from openpyxl.styles import PatternFill
 
 app = Flask(__name__)
 
-conn = pymysql.connect(host=conexao.host, user=conexao.user, password=conexao.passw, database=conexao.db, charset='utf8')
+conn = pymysql.connect(host=conexao.host, user=conexao.user, password=conexao.passw, database=conexao.db,
+                       charset='utf8')
 cursor = conn.cursor()
-
-
-def ultrapassado(velocidade, pos_id):
-    velocidade = int(velocidade)
-    pos_id = int(pos_id)
-    if  velocidade > pos_id :
-        if velocidade <= 100:
-            tol = 1.1
-            velocidadextol = pos_id*tol
-            if velocidade > velocidadextol :
-                velocidadeExcedida =  ((velocidade / pos_id) - 1) * 100 
-                rounded_velocidadeExcedida = round(velocidadeExcedida, 2) 
-                velocidadeExcedida_str = str(rounded_velocidadeExcedida) + '%'
-
-                return velocidadeExcedida_str
-            else:
-                return ''
-        else:
-            tol = 1.07
-            velocidadextol = pos_id*tol
-            if velocidade > velocidadextol:
-
-                velocidadeExcedida =  ((velocidade / pos_id) - 1) * 100 
-                rounded_velocidadeExcedida = round(velocidadeExcedida, 2) 
-                velocidadeExcedida_str = str(rounded_velocidadeExcedida) + '%'
-
-                return velocidadeExcedida_str
-            else:
-                return ''
-    else:
-        return ''
-
-
-def velocidade_excedida(row):
-        if row != '':
-            return 'background-color: pink'
-        else:
-            return '' 
-
-
-def add_km(valor):
-    return f"{valor} km/h"  
 
 
 @app.route('/vetorian/relatorio', methods=['POST'])
 def relatorio_query():
-    
     placa = request.form['placa']
     data = request.form['data']
 
@@ -76,30 +37,31 @@ def relatorio_query():
     cursor.close()
     conn.close()
 
-    if not results :
+    if not results:
         return ' query não obteve resultados'
     else:
-        
+
         data_to_write = [result for result in results]
-        with open(placa+data+'.csv', 'w', newline='', encoding='utf-8') as csvfile:
+        with open(placa + data + '.csv', 'w', newline='', encoding='utf-8') as csvfile:
             csvwriter = csv.writer(csvfile)
 
-            csvwriter.writerow(['PLACA', 'DATA', 'LOCAL', 'VELOCIDADE', 'VELOCIDADE VIA', 'LATITUDE', 'LONGITUDE', 'ULTRAPASSADO'])
-                        
+            csvwriter.writerow(
+                ['PLACA', 'DATA', 'LOCAL', 'VELOCIDADE', 'VELOCIDADE VIA', 'LATITUDE', 'LONGITUDE', 'ULTRAPASSADO'])
+
             for row in data_to_write:
                 velocidade, pos_id = row[3], row[4]
-                row = list(row)  
-                row.append(ultrapassado(velocidade, pos_id))  
+                row = list(row)
+                row.append(ultrapassado(velocidade, pos_id))
                 csvwriter.writerow(row)
 
-        with open(placa+data+'.csv', 'rb') as f:
+        with open(placa + data + '.csv', 'rb') as f:
             result = chardet.detect(f.read())
         encoding = result['encoding']
 
-        df = pd.read_csv(placa+data+'.csv', encoding=encoding)
+        df = pd.read_csv(placa + data + '.csv', encoding=encoding)
 
-        df = df[df['VELOCIDADE'] > 5] 
-        
+        df = df[df['VELOCIDADE'] > 5]
+
         if df.empty:
             return 'nao houve movimentacoes esse dia'
         else:
@@ -109,48 +71,51 @@ def relatorio_query():
 
             df['ULTRAPASSADO'] = df.apply(lambda row: ultrapassado(row['VELOCIDADE'], row['VELOCIDADE VIA']), axis=1)
             df[["VELOCIDADE", "VELOCIDADE VIA"]] = df[["VELOCIDADE", "VELOCIDADE VIA"]].applymap(add_km)
-            
+
             styled_df = df.style.set_properties(**{
                 'font-family': 'Gotham Book',
                 'font-size': '18px',
-            }).applymap(lambda x: f'color: {"black" if isinstance(x,str) else "purple"}''')\
-                    .applymap(velocidade_excedida, subset='ULTRAPASSADO')   
+            }).applymap(lambda x: f'color: {"black" if isinstance(x, str) else "purple"}''') \
+                .applymap(velocidade_excedida, subset='ULTRAPASSADO')
 
-                                    
-            styled_df.to_excel(placa+data+'.xlsx', index=False)
+            styled_df.to_excel(placa + data + '.xlsx', index=False)
 
             return 'ok'
-    
+
 
 @app.route('/relatorio-file', methods=['POST'])
 def relatorio_file():
     if request.files:
-        # No columns to parse from file
+        
         file = request.files['file']
         df = pd.read_csv(file, sep=';')
         df = df[df['velocidade'] > 5]
         filename = file.filename
         name, extension = os.path.splitext(filename)
-        print(name)
-
+        
+        func = Functions() ## instancia classe funcoes
+        
         df['data_atualizacao'] = pd.to_datetime(df['data_atualizacao'], dayfirst=True)
         df['data_atualizacao'] = df['data_atualizacao'].dt.strftime('%d/%m/%Y %H:%M:%S')
 
-        df['ultrapassado'] = df.apply(lambda row: ultrapassado(row['velocidade'], row['pos_id']), axis=1)
-        df[["velocidade", "pos_id"]] = df[["velocidade", "pos_id"]].applymap(add_km)
+        df['ultrapassado'] = df.apply(lambda row: func.ultrapassado(row['velocidade'], row['pos_id']), axis=1)
+        df[["velocidade", "pos_id"]] = df[["velocidade", "pos_id"]].applymap(func.add_km)
 
         styled_df = df.style.set_properties(**{
-                'font-family': 'Gotham Book',
-                'font-size': '18px',
-            }).applymap(lambda x: f'color: {"black" if isinstance(x,str) else "purple"}''')\
-                    .applymap(velocidade_excedida, subset='ultrapassado')   
-        arquivo = name + '.xlsx'     
+            'font-family': 'Gotham Book',
+            'font-size': '18px',
+        }).applymap(lambda x: f'color: {"black" if isinstance(x, str) else "purple"}''') \
+            .applymap(func.velocidade_excedida, subset='ultrapassado')
+        
+        arquivo = name + '.xlsx'
         styled_df.to_excel(arquivo, index=False)
-        print(df)
+
+        # print(df)
 
         return df.to_dict(orient='records')
     else:
         return 'precisa conter arquivo'
+
 
 if __name__ == '__main__':
     # app.run('127.0.0.1')
