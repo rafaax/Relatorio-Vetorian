@@ -24,7 +24,7 @@ conn = pymysql.connect(host=conexao.host, user=conexao.user, password=conexao.pa
 cursor = conn.cursor()
 
 
-@app.route('/vetorian/relatorio', methods=['POST'])
+@app.route('/relatorio', methods=['POST'])
 def relatorio_query():
     placa = request.form['placa']
     data = request.form['data']
