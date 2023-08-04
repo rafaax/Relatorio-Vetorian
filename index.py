@@ -29,7 +29,9 @@ def relatorio_query():
     placa = request.form['placa']
     data = request.form['data']
 
-    query = 'SELECT placa, data_atualizacao, observacao, velocidade, pos_id, latitude, longitude FROM sau_posicionamento WHERE placa = "' + placa + '" AND date(data_atualizacao) = "' + data + '" ORDER BY id DESC'
+    func = Functions() ## instancia classe funcoes
+
+    query = 'SELECT placa, data_atualizacao, observacao, velocidade, pos_id, latitude, longitude FROM sau_posicionamento WHERE placa = "' + placa + '" AND date(data_atualizacao) = "' + data + '" ORDER BY data_atualizacao DESC'
     cursor.execute(query)
     # print(query)
     results = cursor.fetchall()
@@ -51,7 +53,7 @@ def relatorio_query():
             for row in data_to_write:
                 velocidade, pos_id = row[3], row[4]
                 row = list(row)
-                row.append(ultrapassado(velocidade, pos_id))
+                row.append(func.ultrapassado(velocidade, pos_id))
                 csvwriter.writerow(row)
 
         with open(placa + data + '.csv', 'rb') as f:
@@ -69,14 +71,14 @@ def relatorio_query():
             df['DATA'] = pd.to_datetime(df['DATA'])
             df['DATA'] = df['DATA'].dt.strftime('%d/%m/%Y %H:%M:%S')
 
-            df['ULTRAPASSADO'] = df.apply(lambda row: ultrapassado(row['VELOCIDADE'], row['VELOCIDADE VIA']), axis=1)
-            df[["VELOCIDADE", "VELOCIDADE VIA"]] = df[["VELOCIDADE", "VELOCIDADE VIA"]].applymap(add_km)
+            df['ULTRAPASSADO'] = df.apply(lambda row: func.ultrapassado(row['VELOCIDADE'], row['VELOCIDADE VIA']), axis=1)
+            df[["VELOCIDADE", "VELOCIDADE VIA"]] = df[["VELOCIDADE", "VELOCIDADE VIA"]].applymap(func.add_km)
 
             styled_df = df.style.set_properties(**{
                 'font-family': 'Gotham Book',
                 'font-size': '18px',
             }).applymap(lambda x: f'color: {"black" if isinstance(x, str) else "purple"}''') \
-                .applymap(velocidade_excedida, subset='ULTRAPASSADO')
+                .applymap(func.velocidade_excedida, subset='ULTRAPASSADO')
 
             styled_df.to_excel(placa + data + '.xlsx', index=False)
 
