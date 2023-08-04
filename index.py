@@ -21,6 +21,7 @@ app = Flask(__name__)
 
 conn = pymysql.connect(host=conexao.host, user=conexao.user, password=conexao.passw, database=conexao.db,
                        charset='utf8')
+
 cursor = conn.cursor()
 
 
@@ -36,8 +37,8 @@ def relatorio_query():
     # print(query)
     results = cursor.fetchall()
 
-    cursor.close()
-    conn.close()
+    # cursor.close()
+    # conn.close()
 
     if not results:
         return ' query não obteve resultados'
