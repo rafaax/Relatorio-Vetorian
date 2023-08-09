@@ -36,11 +36,11 @@ def relatorio_query():
 
     query = 'SELECT placa, data_atualizacao, observacao, velocidade, pos_id, latitude, longitude FROM sau_posicionamento WHERE placa = "' + placa + '" AND date(data_atualizacao) = "' + data + '" ORDER BY data_atualizacao DESC'
     cursor.execute(query)
-    # print(query)
+
     results = cursor.fetchall()
 
-    # cursor.close()
-    # conn.close()
+    # cursor.close() #nao descomentar
+    # conn.close() #nao descomentar
 
     if not results:
         return ' query não obteve resultados'
@@ -60,6 +60,7 @@ def relatorio_query():
                 csvwriter.writerow(row)
         
         time.sleep(3)
+        
         with open('files/csv/'+placa + data + '.csv', 'rb') as f:
             result = chardet.detect(f.read())
         encoding = result['encoding']
@@ -94,6 +95,7 @@ def relatorio_query():
                 "erro": False,
                 "msg": diretorio_nome
             }
+            
             return response
             abort(400)
             sys.exit()
@@ -129,10 +131,13 @@ def relatorio_file():
         # print(df)
 
         return df.to_dict(orient='records')
+
         abort(400)  
         sys.exit()
+
     else:
         return 'precisa conter arquivo'
+
         abort(400)  
         sys.exit()
 
