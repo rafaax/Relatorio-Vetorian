@@ -3,6 +3,8 @@ import numpy as np
 import pymysql
 import conexao
 import csv
+import json
+import time
 import chardet
 import pytz
 import os
@@ -45,28 +47,31 @@ def relatorio_query():
     else:
 
         data_to_write = [result for result in results]
-        with open(placa + data + '.csv', 'w', newline='', encoding='utf-8') as csvfile:
+        with open('files/csv/'+placa + data + '.csv', 'w', newline='', encoding='utf-8') as csvfile:
             csvwriter = csv.writer(csvfile)
 
             csvwriter.writerow(
                 ['PLACA', 'DATA', 'LOCAL', 'VELOCIDADE', 'VELOCIDADE VIA', 'LATITUDE', 'LONGITUDE', 'ULTRAPASSADO'])
-
+            
             for row in data_to_write:
                 velocidade, pos_id = row[3], row[4]
                 row = list(row)
                 row.append(func.ultrapassado(velocidade, pos_id))
                 csvwriter.writerow(row)
-
-        with open(placa + data + '.csv', 'rb') as f:
+        
+        time.sleep(3)
+        with open('files/csv/'+placa + data + '.csv', 'rb') as f:
             result = chardet.detect(f.read())
         encoding = result['encoding']
 
-        df = pd.read_csv(placa + data + '.csv', encoding=encoding)
+        df = pd.read_csv('files/csv/'+placa + data + '.csv', encoding=encoding)
 
         df = df[df['VELOCIDADE'] > 5]
 
         if df.empty:
             return 'nao houve movimentacoes esse dia'
+            abort(400)
+            sys.exit()
         else:
 
             df['DATA'] = pd.to_datetime(df['DATA'])
@@ -81,9 +86,17 @@ def relatorio_query():
             }).applymap(lambda x: f'color: {"black" if isinstance(x, str) else "purple"}''') \
                 .applymap(func.velocidade_excedida, subset='ULTRAPASSADO')
 
-            styled_df.to_excel(placa + data + '.xlsx', index=False)
+            styled_df.to_excel('files/'+placa+data+'.xlsx', index=False)
+            
+            diretorio_nome = placa+data
 
-            return 'ok'
+            response = {
+                "erro": False,
+                "msg": diretorio_nome
+            }
+            return response
+            abort(400)
+            sys.exit()
 
 
 @app.route('/relatorio-file', methods=['POST'])
@@ -116,10 +129,14 @@ def relatorio_file():
         # print(df)
 
         return df.to_dict(orient='records')
+        abort(400)  
+        sys.exit()
     else:
         return 'precisa conter arquivo'
+        abort(400)  
+        sys.exit()
 
 
 if __name__ == '__main__':
-    # app.run('127.0.0.1')
+    app.run('127.0.0.1')
     app.run()

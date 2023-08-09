@@ -6,3 +6,7 @@ rota_percorrida.py
 venv/
 .idea/
 __pycache__
+*css
+index.php
+backend.php
+download.php
